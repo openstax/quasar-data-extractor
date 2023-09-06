@@ -11,6 +11,8 @@ user_filter = ds.field('user_uuid').isin(users_100)
 s3 = s3fs.S3FileSystem()
 
 bucket = 'quasar-sandbox-events'
+path_ = 'v2021-01/parquet/started_session'
+path_2022 = 'v2021-01/parquet/started_session/year=2022'
 path_2022_11 = 'v2021-01/parquet/started_session/year=2022/month=11'
 path_2022_11_28 = f'{path_2022_11}/day=28'
 
@@ -18,16 +20,25 @@ import threading
 
 pa.set_io_thread_count(128)
 start=time.time()
-def read_day(day):
-    path = f'{path_2022_11}/day={str(day).zfill(2)}'
+def read_day(year,month,day):
+    path = f'{path_}/year={str(year)}/month={str(month).zfill(2)}/day={str(day).zfill(2)}'
     print(f'Starting {path}')
     dataset = pq.ParquetDataset(f'{bucket}/{path}', filesystem=s3, filters=user_filter)
     table = dataset.read_pandas()
     print(f"Read {len(table)} events from {path}")
 
+
+year_month_days  = ( list(zip([2022]*31, [10]*31, range(14,32))) + 
+                     list(zip([2022]*31, [11]*30, range(1,31))) + 
+                     list(zip([2022]*31, [12]*31, range(1,32))) +
+                     list(zip([2023]*31, [1]*31, range(1,32))) +
+                     list(zip([2023]*31, [2]*31, range(1,29)))
+                     )
+
 threads = []
-for day in range(1,31):
-    thread = threading.Thread(target=read_day, args=(day,))
+
+for year, month,day in year_month_days[:120]:
+    thread = threading.Thread(target=read_day, args=(year, month, day))
     threads.append(thread)
     thread.start()
 

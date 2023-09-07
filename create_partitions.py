@@ -26,7 +26,7 @@ def repartition_day(year,month,day):
     dataset = pq.ParquetDataset(f'{bucket}/{path}', filesystem=s3)
     table = dataset.read_pandas(use_threads=True)
     print(f"Read {len(table)} events from {path}")
-    part_path=f's3://started_session_2022_11_uuid/year={str(year)}/month={str(month).zfill(2)}/day={str(day).zfill(2)}'
+    part_path=f's3://{bucket}/started_session_2022_11_uuid/year={str(year)}/month={str(month).zfill(2)}/day={str(day).zfill(2)}'
     pq.write_to_dataset(table, root_path=part_path,partition_cols=['user_uuid'], use_threads=True)
     print(f"Wrote to {part_path}")
 
@@ -38,7 +38,7 @@ year_month_days  = ( list(zip([2022]*31, [10]*31, range(14,32))) +
 threads = []
 
 for year, month,day in year_month_days:
-    thread = threading.Thread(target=read_day, args=(year, month, day))
+    thread = threading.Thread(target=repartition_day, args=(year, month, day))
     threads.append(thread)
     thread.start()
 

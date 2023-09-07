@@ -8,7 +8,8 @@ users_100 = {b'\xf9\xaa\xac\xb7D_I\x82\xb8G;\xbc\x01\x15\xaa\x8b', b'\xac\xe0*\x
 
 user_filter = ds.field('user_uuid').isin(users_100)
 
-s3 = s3fs.S3FileSystem()
+#s3 = s3fs.S3FileSystem()
+s3 = pa.fs.S3FileSystem()
 
 bucket = 'quasar-sandbox-events'
 path_ = 'v2021-01/parquet/started_session'
@@ -40,7 +41,7 @@ part_year_month_days  = (
                      )
 
 threads = []
-for year, month,day in part_year_month_days:
+for year, month,day in part_year_month_days[1:2]:
     thread = threading.Thread(target=read_day, args=(year, month, day))
     threads.append(thread)
     thread.start()

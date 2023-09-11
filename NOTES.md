@@ -1,5 +1,6 @@
 # SCRATCH PAD for notes during implementation
 
+Friday, Sept. 8, 2023
 
 Seems using AWS Batch and Farget w/ a docker image is the best first cut see:
 https://docs.aws.amazon.com/batch/latest/userguide/what-is-batch.html
@@ -19,3 +20,46 @@ the image type, just home many cpus are there. I found specc'ing the network ban
 necessary as well.
 
 Messing w/ CF templates to set up an example that works this way.
+
+Monday, Sept. 11, 2023
+
+Took a little tweaking to make the demo (from
+https://github.com/aws-samples/aws-batch-processing-job-repo) work, mostly
+correcting for building an amd64 docker image on an arm (Apple M1pro) platform,
+and waiting for the stack to deploy before trying to use it.
+
+(Went ahead and submitted a PR to help improve the demo for others)
+
+Overall, seems like a good strategy, discussed w/ Nathan, will probably define
+a json format for a "request for dataset", triggered by storing said file to a
+specific S3 bucket. May include a callback URL that the extractor script would
+call when the extraction is complete.
+  
+https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/best-practices.html
+
+Digging into how to have cloud formation templates cross-reference between
+different repos, since I want to keep the data extractor code here. Starting
+with this, may revert to moving the stack info all over to quasar-deployment
+(and maybe move the connector scripts stuff here?)  Seems possible, given that
+CF values must be unique per region/account, so from the same account w/ the
+same permissions, should be able to look them up, even if they're defined
+elsewhere (I think) as long as the stack has been deployed that exports them.
+Will test w/ some values.
+
+The thing is that the rest of the Quasar deployment stack is not plain vanilla
+CF templates, but built to be called by the ruby-based deployment code
+originally copied from unified-deployment. Compared to other examples I've
+looked at, they depend on a lot more passed-in parameters than is considered
+"best practices" for AWS CF templates. THis is a consequence of them actually
+being mapped to ruby classes, with all the parameters coming from class
+attribute values. Since these get inherited, etc, it's slightly easier to
+handle there. I'll have to see how that impacts use from "outside" the repo
+that contains both.  However, the extractor code does not need access to _any_
+of the typical CF-stack things (like VPC, or specific security groups etc.) All
+it really needs is access to the S3 bucket. Arguably, the extractor bits
+(fargate config, cloudwatch trigger, lambda, etc) should _not_ have direct
+access to the rest of stack, for security containment: best way to avoid having
+a coding issue expose PPI is to not only have checks in the code, but limit
+permissions from outside.
+
+

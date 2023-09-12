@@ -1,6 +1,6 @@
 # SCRATCH PAD for notes during implementation
 
-Friday, Sept. 8, 2023
+Friday, Sept 8, 2023
 
 Seems using AWS Batch and Farget w/ a docker image is the best first cut see:
 https://docs.aws.amazon.com/batch/latest/userguide/what-is-batch.html
@@ -21,7 +21,7 @@ necessary as well.
 
 Messing w/ CF templates to set up an example that works this way.
 
-Monday, Sept. 11, 2023
+Monday, Sept 11, 2023
 
 Took a little tweaking to make the demo (from
 https://github.com/aws-samples/aws-batch-processing-job-repo) work, mostly
@@ -61,5 +61,25 @@ it really needs is access to the S3 bucket. Arguably, the extractor bits
 access to the rest of stack, for security containment: best way to avoid having
 a coding issue expose PPI is to not only have checks in the code, but limit
 permissions from outside.
+
+Tuesday, Sept 12, 2023
+
+Fleshed out the actual access api (json edition) with examples for the 
+data set request and results documents. (c.f. REQUEST_API.md) and
+https://openstax.atlassian.net/wiki/spaces/KA/pages/2314534913/Research+Data+Access+API+-+details
+
+
+Dug into what it would take to have separate CF templates that use values from
+separate repos: doesn't look like a best practices sort of thing at all  - if
+it's doable, it's hard. And the only win is maybe better security (as described above).
+So, have decided to stand up a new stack inside the existing quasar-deployment
+repo and CF collection, instead. And need to start with that, rather than getting 
+the data script working first, since the environment it will run in is critical.
+
+
+ 
+
+
+
 
 

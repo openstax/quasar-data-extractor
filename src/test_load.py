@@ -37,7 +37,7 @@ year_month_days  = ( list(zip([2022]*31, [10]*31, range(14,32))) +
 
 threads = []
 
-for year, month,day in year_month_days[:120]:
+for year, month,day in year_month_days[:2]:
     thread = threading.Thread(target=read_day, args=(year, month, day))
     threads.append(thread)
     thread.start()

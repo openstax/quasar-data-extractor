@@ -1,0 +1,14 @@
+{
+  "criteria": {
+    "eventTypes": ["started_session", "created_highlight",
+                   "interacted_element", "event_type_3"],
+    "dateRange": {
+      "startTimestamp": "YYYY-MM-DDTHH:MM:SSZ",
+      "endTimestamp": "YYYY-MM-DDTHH:MM:SSZ"
+    },
+    "userUUIDs": ["uuid_1", "uuid_2", "uuid_3",
+                  "uuid_248", "uuid_249", "uuid_250"]
+  },
+  "callbackURL": "https://example.com/callback",
+  "resultsS3URL": "s3://your-s3-bucket/path/to/results/"
+}

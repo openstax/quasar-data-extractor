@@ -77,7 +77,45 @@ repo and CF collection, instead. And need to start with that, rather than gettin
 the data script working first, since the environment it will run in is critical.
 
 
+Wednesday, Sept 13, 2023
+
+Task and card breakdown work in the a.m. Had planning meeting re: rest of Q3
+
+Got batch demo actually deploying as part of quasar-deployment, though it's still doing its
+"read a csv and put it in a dynamodb" thing, so is not integrated beyond being deployed by the
+aws ruby wrapper code.
+
+Thursday, Sept 14, 2023
+
+Lots and lots of CF work: further intergrated extractor stack w/ the rest of quasar deployment
+Figured out the docker image creation and upload: convert to using test_load.py as payload
+update lambda trigger to invoke proper function. Bam! It works!
+
+Checked w/ Dante re: codebuilder. He suggested bothering to set it up only if the image will
+change fairly frequently.  Looking at it a bit more, I'm concerned about auto-deploying to
+production, accidently. Will stick w/ manual build/deploy for now (similar to other Quasar stacks)
+
+Friday, Sept 15, 2023
+
+Let's write an actual data extractor script! 
+Learning all the details on S3 notifications, lambda execution, and how events are triggered and
+passed.
+
+Decision time: workflow, one bucket or two? I'm tempted to make it one S3 bucket: you write your
+request in a file name '/some/path/my_request.json' (anything that ends in request.json) and the
+results are written to '/some/path/event_data_subset_<jobId>  (or maybe timestamp: event_data_2023_09_20)
+
+That way the enclave only needs to deal with one bucket. It does mean that the data analysis code
+will have write privs on the data, but I think that's actually probably correct. It's a copy, anyway.
+
  
+for Monday:
+ - pass in the actual event data bucket
+ - deal w/ the top-level prefix (the env name) that exists in there
+ - writing data
+ - threads
+
+
 
 
 

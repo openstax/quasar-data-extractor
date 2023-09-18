@@ -34,7 +34,7 @@ def read_request_from_s3(bucket_name, object_key):
         return None
 
 
-def process_event_date(event, date, user_filter, results_prefix):
+def process_event_date(event, date, user_filter, input_bucket, results_prefix):
     s3 = s3fs.S3FileSystem()
 
     path = f"{path_prefix}/{event}/{date}"
@@ -44,7 +44,7 @@ def process_event_date(event, date, user_filter, results_prefix):
     table = dataset.read_pandas()
     print(f"Read {len(table)} events from {path}")
 
-    part_path = f"{results_prefix}/{event}/{date}"
+    part_path = f"s3://{input_bucket}/{results_prefix}/{event}/{date}"
     pq.write_to_dataset(table, root_path=part_path)
 
     return len(table)
@@ -100,7 +100,7 @@ def main():
     total_events = 0
     for event in events:
         for date in date_prefixes:
-            total_events += process_event_date(event, date, user_filter, results_prefix)
+            total_events += process_event_date(event, date, user_filter, input_bucket, results_prefix)
 
    # need to fire callback URL here
 

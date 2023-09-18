@@ -64,10 +64,12 @@ def main():
 
     # Check for testing overrides:
     if "eventBucketOverride" in data_request.keys():
-        global event_bucket = data_request["EventBucketOverride"]
+        global event_bucket
+        event_bucket = data_request["eventBucketOverride"]
 
     if "eventPrefixOverride" in data_request.keys():
-        global path_prefix = data_request["EventPrefixOverride"]
+        global path_prefix
+        path_prefix = data_request["eventPrefixOverride"]
 
     # Prepare the filters and prefixes for fetching
     # uuids need to be binary to filter properly from parquet store

@@ -115,9 +115,9 @@ for Monday:
  - writing data
  - threads
 
+Monday, Sept 18, 2023
 
-
-
-
-
+Completed up to writing data. Works with small sample request (1 event, 100 users, 2 days) Have not yet
+measured scale, nor attempted threading in this context. Also needs more error handling, and the callback
+reporting is not yet implmented. But it works!
 

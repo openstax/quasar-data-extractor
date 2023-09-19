@@ -4,8 +4,8 @@
   "criteria": {
     "eventTypes": ["started_session"],
     "dateRange": {
-      "startTimestamp": "2022-11-28T00:00:00Z",
-      "endTimestamp": "2022-11-29T00:00:00Z"
+      "startTimestamp": "2022-11-25T00:00:00Z",
+      "endTimestamp": "2022-12-25T00:00:00Z"
     },
     "userUUIDs": ["c6ccc9f0-1c42-4794-ab14-adc131caed19", "53cf4895-a1d9-4a67-a756-be4f0bfb484c",
 "92262bd0-9ffe-46f8-8b7f-eaf83880aa1f", "652fc0ee-4534-4a73-a04d-d7db97709f25",

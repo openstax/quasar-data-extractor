@@ -50,14 +50,14 @@ def read_request_from_s3(bucket_name, object_key):
         return None
 
 
-def write_file_to_s3(bucket_name, bucket_key, result):
+def write_file_to_s3(bucket_name, object_key, result):
     s3_client = boto3.client("s3")
 
     try:
         response = s3_client.put_object(
             Bucket=bucket_name,
             Key=object_key,
-            Body=(bytes(json.dumps(json_data, indent=4).encode("UTF-8"))),
+            Body=(bytes(json.dumps(result, indent=4).encode("UTF-8"))),
         )
     except Exception as e:
         print(f"Failed to write result file to S3: {e}")
@@ -80,7 +80,7 @@ def process_event_date(event, date, user_filter, input_bucket, results_prefix):
 
     unique_users |= set(table["user_uuid"].unique())
 
-    timestamp_mix_max = pc.min_max(table["occurred_at"])
+    timestamp_min_max = pc.min_max(table["occurred_at"])
 
     part_path = f"s3://{input_bucket}/{results_prefix}/{event}/{date}"
     pq.write_to_dataset(table, root_path=part_path)
@@ -136,8 +136,8 @@ def main():
 
     # Loop over events and dates, filtering for users, write to results
     total_events = 0
-    timestamp_max = datetime.min.replace(utc)
-    timestamp_min = datetime.max.replace(utc)
+    timestamp_max = datetime.min.replace(tzinfo=utc)
+    timestamp_min = datetime.max.replace(tzinfo=utc)
 
     for event in events:
         for date in date_prefixes:

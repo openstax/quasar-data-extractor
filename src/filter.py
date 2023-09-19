@@ -161,7 +161,7 @@ def main():
         "uniqueUserUUIDs": len(unique_users),
     }
 
-    write_file_to_s3(input_bucket, f"{results_prefix}/request.json", data_request)
+    write_file_to_s3(input_bucket, f"{results_prefix}/request_completed.json", data_request)
     write_file_to_s3(input_bucket, f"{results_prefix}/results.json", data_results)
 
     return

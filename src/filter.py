@@ -50,22 +50,20 @@ def read_request_from_s3(bucket_name, object_key):
         return None
 
 
-def write_results_file(bucket_name, bucket_key, result):
+def write_file_to_s3(bucket_name, bucket_key, result):
     s3_client = boto3.client("s3")
 
     try:
         response = s3_client.put_object(
             Bucket=bucket_name,
             Key=object_key,
-            Body=(bytes(json.dumps(json_data).encode("UTF-8"))),
+            Body=(bytes(json.dumps(json_data, indent=4).encode("UTF-8"))),
         )
     except Exception as e:
         print(f"Failed to write result file to S3: {e}")
-        return None
 
 
 unique_users = set()
-
 
 def process_event_date(event, date, user_filter, input_bucket, results_prefix):
     global unique_users
@@ -153,7 +151,7 @@ def main():
     # need to fire callback URL here
 
     results_url = f"s3://{input_bucket}/{results_prefix}/"
-    results = {
+    data_results = {
         "extractionStatus": "completed",
         "results_URL": results_url,
         "extractionTime": str(datetime.now() - start),
@@ -163,7 +161,8 @@ def main():
         "uniqueUserUUIDs": len(unique_users),
     }
 
-    write_result_file(input_bucket, f"{results_prefix}/results.json", results)
+    write_file_to_s3(input_bucket, f"{results_prefix}/request.json", data_request)
+    write_file_to_s3(input_bucket, f"{results_prefix}/results.json", data_results)
 
     return
 

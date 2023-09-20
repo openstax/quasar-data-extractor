@@ -13,6 +13,7 @@ import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.dataset as ds
 import pyarrow.parquet as pq
+import requests
 import s3fs
 
 
@@ -148,8 +149,6 @@ def main():
             timestamp_max = max(timestamp_max, time_min_max["max"].as_py())
             timestamp_min = min(timestamp_min, time_min_max["min"].as_py())
 
-    # need to fire callback URL here
-
     results_url = f"s3://{input_bucket}/{results_prefix}/"
     data_results = {
         "extractionStatus": "completed",
@@ -164,7 +163,10 @@ def main():
     write_file_to_s3(input_bucket, f"{results_prefix}/request_completed.json", data_request)
     write_file_to_s3(input_bucket, f"{results_prefix}/results.json", data_results)
 
-    return
+    if data_request.get('callbackURL'):
+        resp = requests.post(data_request['callbackURL'], json=data_results)
+
+    return data_results
 
 
 if __name__ == "__main__":

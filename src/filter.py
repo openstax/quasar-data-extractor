@@ -99,8 +99,8 @@ def process_event_date(event, date, user_filter, input_bucket, results_prefix):
     timestamp_min = timestamp_min_max['min'].as_py()
     timestamp_max = timestamp_min_max['max'].as_py()
 
-    part_path = f"s3://{input_bucket}/{results_prefix}/{event}/{date}"
-    pq.write_to_dataset(table, root_path=part_path)
+    part_path = f"{input_bucket}/{results_prefix}/{event}/{date}"
+    pq.write_to_dataset(table, root_path=part_path, filesystem=s3)
 
     return (len(table), timestamp_min, timestamp_max)
 
@@ -166,8 +166,8 @@ def main():
             timestamp_min = min(timestamp_min, date_min)
 
     results_url = f"s3://{input_bucket}/{results_prefix}/"
-    firstTimestamp = timestamp_min.iso_format() if timestamp_min != future_inf else None
-    lastTimestamp = timestamp_max.iso_format() if timestamp_max != past_inf else None
+    firstTimestamp = timestamp_min.isoformat() if timestamp_min != future_inf else None
+    lastTimestamp = timestamp_max.isoformat() if timestamp_max != past_inf else None
     data_results = {
         "extractionStatus": "completed",
         "results_URL": results_url,

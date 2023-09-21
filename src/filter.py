@@ -76,7 +76,6 @@ def process_event_date(event, date, user_filter, input_bucket, results_prefix):
 
     empty_result = (0, future_inf, past_inf)
     try:
-        import pdb; pdb.set_trace()
         dataset = pq.ParquetDataset(
             f"{event_bucket}/{path}", filesystem=s3, filters=user_filter
         )

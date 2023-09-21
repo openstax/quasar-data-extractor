@@ -1,0 +1,11 @@
+{
+  "callbackURL": "https://smee.io/vJy3Fhm9IgRzfqin",
+  "eventPrefixOverride": "v2021-01/parquet",
+  "criteria": {
+    "eventTypes": ["started_session"],
+    "dateRange": {
+      "startTimestamp": "2022-11-25T00:00:00Z",
+      "endTimestamp": "2022-11-29T00:00:00Z"
+    },
+    "userUUIDs": ["357e36fb-96bc-4464-bed9-53c2a42c24cd"]  }
+}

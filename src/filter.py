@@ -18,6 +18,8 @@ import s3fs
 
 
 utc = pytz.UTC
+past_inf = datetime.min.replace(tzinfo=utc)
+future_inf = datetime.max.replace(tzinfo=utc)
 
 event_bucket = os.environ.get("EventBucket")
 path_prefix = os.environ.get("EventPrefix")
@@ -70,23 +72,38 @@ def process_event_date(event, date, user_filter, input_bucket, results_prefix):
     global unique_users
 
     s3 = s3fs.S3FileSystem()
-
     path = f"{path_prefix}/{event}/{date}"
-    dataset = pq.ParquetDataset(
-        f"{event_bucket}/{path}", filesystem=s3, filters=user_filter
-    )
-    table = dataset.read_pandas()
+
+    empty_result = (0, future_inf, past_inf)
+    try:
+        import pdb; pdb.set_trace()
+        dataset = pq.ParquetDataset(
+            f"{event_bucket}/{path}", filesystem=s3, filters=user_filter
+        )
+        table = dataset.read_pandas()
+    except FileNotFoundError:
+        # Expected case for events that do not span entire date range
+        return empty_result
+
+    if len(table) == 0:
+        return empty_result
 
     # Extract various measures
+    # TODO likely to need some sort of dispatch based on event type,
+    # since non-core OS types (currently just xapi) store the timestamp
+    # and user uuid in different places. The fields occurred_at and user_uuid
+    # work for all core OS types
 
     unique_users |= set(table["user_uuid"].unique())
 
     timestamp_min_max = pc.min_max(table["occurred_at"])
+    timestamp_min = timestamp_min_max['min'].as_py()
+    timestamp_max = timestamp_min_max['max'].as_py()
 
     part_path = f"s3://{input_bucket}/{results_prefix}/{event}/{date}"
     pq.write_to_dataset(table, root_path=part_path)
 
-    return (len(table), timestamp_min_max)
+    return (len(table), timestamp_min, timestamp_max)
 
 
 def prep_criteria(data_request):
@@ -137,26 +154,28 @@ def main():
 
     # Loop over events and dates, filtering for users, write to results
     total_events = 0
-    timestamp_max = datetime.min.replace(tzinfo=utc)
-    timestamp_min = datetime.max.replace(tzinfo=utc)
+    timestamp_max = past_inf
+    timestamp_min = future_inf
 
     for event in events:
         for date in date_prefixes:
-            new_event_count, time_min_max = process_event_date(
+            new_event_count, date_min, date_max = process_event_date(
                 event, date, user_filter, input_bucket, results_prefix
             )
             total_events += new_event_count
-            timestamp_max = max(timestamp_max, time_min_max["max"].as_py())
-            timestamp_min = min(timestamp_min, time_min_max["min"].as_py())
+            timestamp_max = max(timestamp_max, date_max)
+            timestamp_min = min(timestamp_min, date_min)
 
     results_url = f"s3://{input_bucket}/{results_prefix}/"
+    firstTimestamp = timestamp_min.iso_format() if timestamp_min != future_inf else None
+    lastTimestamp = timestamp_max.iso_format() if timestamp_max != past_inf else None
     data_results = {
         "extractionStatus": "completed",
         "results_URL": results_url,
         "extractionTime": str(datetime.now() - start),
         "totalEvents": total_events,
-        "firstTimestamp": timestamp_min.isoformat(),
-        "lastTimestamp": timestamp_max.isoformat(),
+        "firstTimestamp": firstTimestamp,
+        "lastTimestamp": lastTimestamp,
         "uniqueUserUUIDs": len(unique_users),
     }
 

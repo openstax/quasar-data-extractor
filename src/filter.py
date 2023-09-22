@@ -146,7 +146,7 @@ def main():
     # Will write result to same bucket prefix as request.json file
     results_prefix = "/".join(
         filename.split("/")[:-1]
-        + [f"event_data_{datetime.now().strftime('%Y_%m_%d')}-{job_id}"]
+        + [f"event_data_{datetime.now().isoformat()[:-3]}-{job_id[:4]}"]
     )
 
     events, user_filter, date_prefixes = prep_criteria(data_request)

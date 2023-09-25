@@ -1,0 +1,9 @@
+{
+    "extractionStatus": "completed",
+    "results_URL": "s3://quasar-sandbox-events-requests/performance_test_2_cpu/event_data_2023-09-22T17:09:43.766-5110/",
+    "extractionTime": "0:08:12.888487",
+    "totalEvents": 375,
+    "firstTimestamp": "2022-11-19T01:06:07.349000+00:00",
+    "lastTimestamp": "2022-11-29T23:53:19.014000+00:00",
+    "uniqueUserUUIDs": 63
+}

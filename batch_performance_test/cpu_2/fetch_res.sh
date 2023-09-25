@@ -1,0 +1,14 @@
+aws s3 cp s3://quasar-sandbox-events-requests/performance_test_2_cpu/event_data_2023-09-22T20:45:18.977-1814/results.json 1-results.json
+aws s3 cp s3://quasar-sandbox-events-requests/performance_test_2_cpu/event_data_2023-09-22T20:45:19.388-a4ac/results.json 2-results.json
+aws s3 cp s3://quasar-sandbox-events-requests/performance_test_2_cpu/event_data_2023-09-22T20:45:20.734-aa70/results.json 3-results.json
+aws s3 cp s3://quasar-sandbox-events-requests/performance_test_2_cpu/event_data_2023-09-22T20:45:21.597-634e/results.json 4-results.json
+aws s3 cp s3://quasar-sandbox-events-requests/performance_test_2_cpu/event_data_2023-09-22T20:45:21.797-42c7/results.json 5-results.json
+aws s3 cp s3://quasar-sandbox-events-requests/performance_test_2_cpu/event_data_2023-09-22T20:45:21.850-e565/results.json 6-results.json
+aws s3 cp s3://quasar-sandbox-events-requests/performance_test_2_cpu/event_data_2023-09-22T20:45:23.250-9735/results.json 7-results.json
+aws s3 cp s3://quasar-sandbox-events-requests/performance_test_2_cpu/event_data_2023-09-22T20:45:18.977-1814/request_completed.json 1-request_completed.json
+aws s3 cp s3://quasar-sandbox-events-requests/performance_test_2_cpu/event_data_2023-09-22T20:45:19.388-a4ac/request_completed.json 2-request_completed.json
+aws s3 cp s3://quasar-sandbox-events-requests/performance_test_2_cpu/event_data_2023-09-22T20:45:20.734-aa70/request_completed.json 3-request_completed.json
+aws s3 cp s3://quasar-sandbox-events-requests/performance_test_2_cpu/event_data_2023-09-22T20:45:21.597-634e/request_completed.json 4-request_completed.json
+aws s3 cp s3://quasar-sandbox-events-requests/performance_test_2_cpu/event_data_2023-09-22T20:45:21.797-42c7/request_completed.json 5-request_completed.json
+aws s3 cp s3://quasar-sandbox-events-requests/performance_test_2_cpu/event_data_2023-09-22T20:45:21.850-e565/request_completed.json 6-request_completed.json
+aws s3 cp s3://quasar-sandbox-events-requests/performance_test_2_cpu/event_data_2023-09-22T20:45:23.250-9735/request_completed.json 7-request_completed.json

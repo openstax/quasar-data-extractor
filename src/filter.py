@@ -5,6 +5,7 @@ import time
 import pytz
 
 from datetime import datetime
+from multiprocessing import Process, SimpleQueue
 from uuid import UUID
 
 import boto3
@@ -66,26 +67,26 @@ def write_file_to_s3(bucket_name, object_key, result):
         print(f"Failed to write result file to S3: {e}")
 
 
-unique_users = set()
+def process_event_date(res_queue, event, date, user_filter, input_bucket, results_prefix):
 
-def process_event_date(event, date, user_filter, input_bucket, results_prefix):
-    global unique_users
-
+    print(f"In process for {date}")
     s3 = s3fs.S3FileSystem()
     path = f"{path_prefix}/{event}/{date}"
 
-    empty_result = (0, future_inf, past_inf)
+    empty_result = (0, set(), future_inf, past_inf)
     try:
         dataset = pq.ParquetDataset(
             f"{event_bucket}/{path}", filesystem=s3, filters=user_filter
         )
-        table = dataset.read_pandas()
+        table = dataset.read_pandas( use_threads=True)
     except FileNotFoundError:
         # Expected case for events that do not span entire date range
-        return empty_result
+        res_queue.put(empty_result)
+        return
 
     if len(table) == 0:
-        return empty_result
+        res_queue.put(empty_result)
+        return
 
     # Extract various measures
     # TODO likely to need some sort of dispatch based on event type,
@@ -93,7 +94,7 @@ def process_event_date(event, date, user_filter, input_bucket, results_prefix):
     # and user uuid in different places. The fields occurred_at and user_uuid
     # work for all core OS types
 
-    unique_users |= set(table["user_uuid"].unique())
+    unique_users = set(table["user_uuid"].unique())
 
     timestamp_min_max = pc.min_max(table["occurred_at"])
     timestamp_min = timestamp_min_max['min'].as_py()
@@ -102,7 +103,7 @@ def process_event_date(event, date, user_filter, input_bucket, results_prefix):
     part_path = f"{input_bucket}/{results_prefix}/{event}/{date}"
     pq.write_to_dataset(table, root_path=part_path, filesystem=s3)
 
-    return (len(table), timestamp_min, timestamp_max)
+    res_queue.put((len(table), unique_users, timestamp_min, timestamp_max))
 
 
 def prep_criteria(data_request):
@@ -144,6 +145,7 @@ def main():
     data_request = read_request_from_s3(input_bucket, filename)
 
     # Will write result to same bucket prefix as request.json file
+    # appends timestamp for uniqueness (as well as part of job id)
     results_prefix = "/".join(
         filename.split("/")[:-1]
         + [f"event_data_{datetime.now().isoformat()[:-3]}-{job_id[:4]}"]
@@ -152,18 +154,28 @@ def main():
     events, user_filter, date_prefixes = prep_criteria(data_request)
 
     # Loop over events and dates, filtering for users, write to results
+    results_queue = SimpleQueue()
     total_events = 0
+    unique_users = set()
     timestamp_max = past_inf
     timestamp_min = future_inf
 
+    procs = []
     for event in events:
         for date in date_prefixes:
-            new_event_count, date_min, date_max = process_event_date(
-                event, date, user_filter, input_bucket, results_prefix
-            )
-            total_events += new_event_count
-            timestamp_max = max(timestamp_max, date_max)
-            timestamp_min = min(timestamp_min, date_min)
+            p = Process(target=process_event_date, args=(results_queue,
+                event, date, user_filter, input_bucket, results_prefix))
+            procs.append(p)
+            p.start()
+
+    print(f"Launched {len(procs)} procs")
+    for _ in procs:
+        new_event_count, new_users, date_min, date_max = results_queue.get() # Blocks
+
+        total_events += new_event_count
+        unique_users |= new_users
+        timestamp_max = max(timestamp_max, date_max)
+        timestamp_min = min(timestamp_min, date_min)
 
     results_url = f"s3://{input_bucket}/{results_prefix}/"
     firstTimestamp = timestamp_min.isoformat() if timestamp_min != future_inf else None

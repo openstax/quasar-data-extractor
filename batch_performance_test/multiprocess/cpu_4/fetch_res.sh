@@ -1,0 +1,12 @@
+aws s3 cp s3://quasar-sandbox-events-requests/test_use_multiprocess/event_data_2023-09-25T20:52:11.518-bcb2/results.json 1-results.json
+aws s3 cp s3://quasar-sandbox-events-requests/test_use_multiprocess/event_data_2023-09-25T20:52:12.649-75a6/results.json 2-results.json
+aws s3 cp s3://quasar-sandbox-events-requests/test_use_multiprocess/event_data_2023-09-25T20:52:13.604-c229/results.json 3-results.json
+aws s3 cp s3://quasar-sandbox-events-requests/test_use_multiprocess/event_data_2023-09-25T20:52:16.204-33fd/results.json 4-results.json
+aws s3 cp s3://quasar-sandbox-events-requests/test_use_multiprocess/event_data_2023-09-25T20:52:16.674-c495/results.json 5-results.json
+aws s3 cp s3://quasar-sandbox-events-requests/test_use_multiprocess/event_data_2023-09-25T20:53:08.039-316b/results.json 6-results.json
+aws s3 cp s3://quasar-sandbox-events-requests/test_use_multiprocess/event_data_2023-09-25T20:52:11.518-bcb2/request_completed.json 1-request_completed.json
+aws s3 cp s3://quasar-sandbox-events-requests/test_use_multiprocess/event_data_2023-09-25T20:52:12.649-75a6/request_completed.json 2-request_completed.json
+aws s3 cp s3://quasar-sandbox-events-requests/test_use_multiprocess/event_data_2023-09-25T20:52:13.604-c229/request_completed.json 3-request_completed.json
+aws s3 cp s3://quasar-sandbox-events-requests/test_use_multiprocess/event_data_2023-09-25T20:52:16.204-33fd/request_completed.json 4-request_completed.json
+aws s3 cp s3://quasar-sandbox-events-requests/test_use_multiprocess/event_data_2023-09-25T20:52:16.674-c495/request_completed.json 5-request_completed.json
+aws s3 cp s3://quasar-sandbox-events-requests/test_use_multiprocess/event_data_2023-09-25T20:53:08.039-316b/request_completed.json 6-request_completed.json

@@ -24,9 +24,6 @@ utc = pytz.UTC
 past_inf = datetime.min.replace(tzinfo=utc)
 future_inf = datetime.max.replace(tzinfo=utc)
 
-event_bucket = os.environ.get("EventBucket")
-path_prefix = os.environ.get("EventPrefix")
-
 
 def read_request_from_s3(bucket_name, object_key):
     s3_client = boto3.client("s3")
@@ -37,15 +34,6 @@ def read_request_from_s3(bucket_name, object_key):
 
         try:
             data_request = json.loads(json_str)
-
-            # Check for testing overrides:
-            if "eventBucketOverride" in data_request.keys():
-                global event_bucket
-                event_bucket = data_request["eventBucketOverride"]
-
-            if "eventPrefixOverride" in data_request.keys():
-                global path_prefix
-                path_prefix = data_request["eventPrefixOverride"]
 
             return data_request
         except json.JSONDecodeError as e:
@@ -69,10 +57,10 @@ def write_file_to_s3(bucket_name, object_key, result):
         print(f"Failed to write result file to S3: {e}")
 
 
-def process_event_date(event, date, user_filter, input_bucket, results_prefix):
+def process_event_date(event, date, user_filter, input_bucket, results_prefix, event_bucket, event_prefix):
 
+    path = f"{event_prefix}/{event}/{date}"
     s3 = s3fs.S3FileSystem()
-    path = f"{path_prefix}/{event}/{date}"
 
     print(f"Processing: {event}/{date}")
     empty_result = (0, set(), future_inf, past_inf)
@@ -134,6 +122,8 @@ def main():
     # Fetch the request json
     start = datetime.now()
 
+    event_bucket = os.environ.get("EventBucket")
+    event_prefix = os.environ.get("EventPrefix")
     input_bucket = os.environ.get("InputBucket")
     filename = os.environ.get("Filename")
     job_id = os.environ.get("AWS_BATCH_JOB_ID")
@@ -143,6 +133,18 @@ def main():
         exit(1)
 
     data_request = read_request_from_s3(input_bucket, filename)
+
+    # Check for testing overrides:
+    if "eventBucketOverride" in data_request:
+        event_bucket = data_request["eventBucketOverride"]
+
+    if "eventPrefixOverride" in data_request:
+        event_prefix = data_request["eventPrefixOverride"]
+
+    if "cpuScalingFactor" in data_request:
+        cpu_scaler =  data_request["cpuScalingFactor"]
+    else:
+        cpu_scaler = 4
 
     # Will write result to same bucket prefix as request.json file
     # appends timestamp for uniqueness (as well as part of job id)
@@ -160,22 +162,25 @@ def main():
     timestamp_max = past_inf
     timestamp_min = future_inf
 
-    print(f"pool size {cpus*10}")
-    my_pool = Pool(cpus*10) # The magic number is based on testing this I/O bound task
+    print(f"Pool size: {cpus * cpu_scaler}")
+    set_start_method('spawn')
+    my_pool = Pool(cpus * cpu_scaler) 
 
     rets = {}
     bad = {}
     for event in events:
         for date in date_prefixes:
             r = my_pool.apply_async(process_event_date, ( event, date,
-                     user_filter, input_bucket, results_prefix))
+                     user_filter, input_bucket, results_prefix, event_bucket, event_prefix))
             rets[f"{event}/{date}"] = r
+
+    my_pool.close()
 
     print(f"Launched {len(rets)} procs")
     passes=0
     previous_remaining = 0 
     while rets:
-        passes+=1
+        passes += 1
         remaining = len(rets)
         if remaining != previous_remaining:
             previous_remaining = remaining
@@ -198,8 +203,10 @@ def main():
                     bad[p] = r
             else:
                 rets[p] = r
+    # TODO implement some sort of retry, rather than just dumping these
     if bad:
         print(f"Bad days: {bad.keys()}")
+        write_file_to_s3(input_bucket, f"{results_prefix}/error_days.json", list(bad.keys()))
 
     results_url = f"s3://{input_bucket}/{results_prefix}/"
     firstTimestamp = timestamp_min.isoformat() if timestamp_min != future_inf else None

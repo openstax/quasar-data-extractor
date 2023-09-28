@@ -5,7 +5,7 @@ import time
 import pytz
 
 from datetime import datetime
-from multiprocessing import TimeoutError, Pool, cpu_count, get_context
+from multiprocessing import TimeoutError, Pool, cpu_count, set_start_method
 from uuid import UUID
 
 import boto3
@@ -155,50 +155,51 @@ def main():
 
     # Loop over events and dates, filtering for users, write to results
     cpus = cpu_count() or 1
-    print(f"pool size {cpus*10}")
     total_events = 0
     unique_users = set()
     timestamp_max = past_inf
     timestamp_min = future_inf
-    with get_context("spawn").Pool(cpus*10) as my_pool: # The magic number is based on testing this I/O bound task
 
-        rets = {}
-        bad = {}
-        for event in events:
-            for date in date_prefixes:
-                r = my_pool.apply_async(process_event_date, ( event, date,
-                         user_filter, input_bucket, results_prefix))
-                rets[f"{event}/{date}"] = r
+    print(f"pool size {cpus*10}")
+    my_pool = Pool(cpus*10) # The magic number is based on testing this I/O bound task
 
-        print(f"Launched {len(rets)} procs")
-        passes=0
-        previous_remaining = 0 
-        while rets:
-            passes+=1
-            remaining = len(rets)
-            if remaining != previous_remaining:
-                previous_remaining = remaining
-                print(f"Pass: {passes} Remaining: {remaining} Events: {total_events}")
+    rets = {}
+    bad = {}
+    for event in events:
+        for date in date_prefixes:
+            r = my_pool.apply_async(process_event_date, ( event, date,
+                     user_filter, input_bucket, results_prefix))
+            rets[f"{event}/{date}"] = r
+
+    print(f"Launched {len(rets)} procs")
+    passes=0
+    previous_remaining = 0 
+    while rets:
+        passes+=1
+        remaining = len(rets)
+        if remaining != previous_remaining:
+            previous_remaining = remaining
+            print(f"Pass: {passes} Remaining: {remaining} Events: {total_events}")
+        else:
+            time.sleep(1)
+        procs = list(rets.keys())
+        for p in procs:
+            r = rets.pop(p)
+            if r.ready():
+                try:
+                    new_event_count, new_users, date_min, date_max = r.get(1)
+
+                    total_events += new_event_count
+                    unique_users |= new_users
+                    timestamp_max = max(timestamp_max, date_max)
+                    timestamp_min = min(timestamp_min, date_min)
+                except Exception as e:
+                    print(f"Error - putting in error list {e}")
+                    bad[p] = r
             else:
-                time.sleep(1)
-            procs = list(rets.keys())
-            for p in procs:
-                r = rets.pop(p)
-                if r.ready():
-                    try:
-                        new_event_count, new_users, date_min, date_max = r.get(1)
-
-                        total_events += new_event_count
-                        unique_users |= new_users
-                        timestamp_max = max(timestamp_max, date_max)
-                        timestamp_min = min(timestamp_min, date_min)
-                    except Exception as e:
-                        print(f"Error - putting in error list {e}")
-                        bad[p] = r
-                else:
-                    rets[p] = r
-        if bad:
-            print(f"Bad days: {bad.keys()}")
+                rets[p] = r
+    if bad:
+        print(f"Bad days: {bad.keys()}")
 
     results_url = f"s3://{input_bucket}/{results_prefix}/"
     firstTimestamp = timestamp_min.isoformat() if timestamp_min != future_inf else None

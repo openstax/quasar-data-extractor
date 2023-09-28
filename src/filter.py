@@ -5,7 +5,7 @@ import time
 import pytz
 
 from datetime import datetime
-from multiprocessing import Process, SimpleQueue
+from multiprocessing import TimeoutError, Pool, cpu_count, get_context
 from uuid import UUID
 
 import boto3
@@ -17,6 +17,8 @@ import pyarrow.parquet as pq
 import requests
 import s3fs
 
+
+# Default might be "fork" which can cause freezes if child procs use threads
 
 utc = pytz.UTC
 past_inf = datetime.min.replace(tzinfo=utc)
@@ -67,26 +69,24 @@ def write_file_to_s3(bucket_name, object_key, result):
         print(f"Failed to write result file to S3: {e}")
 
 
-def process_event_date(res_queue, event, date, user_filter, input_bucket, results_prefix):
+def process_event_date(event, date, user_filter, input_bucket, results_prefix):
 
-    print(f"In process for {date}")
     s3 = s3fs.S3FileSystem()
     path = f"{path_prefix}/{event}/{date}"
 
+    print(f"Processing: {event}/{date}")
     empty_result = (0, set(), future_inf, past_inf)
     try:
         dataset = pq.ParquetDataset(
             f"{event_bucket}/{path}", filesystem=s3, filters=user_filter
         )
-        table = dataset.read_pandas( use_threads=True)
+        table = dataset.read_pandas(use_threads=True)
     except FileNotFoundError:
         # Expected case for events that do not span entire date range
-        res_queue.put(empty_result)
-        return
+        return (empty_result)
 
     if len(table) == 0:
-        res_queue.put(empty_result)
-        return
+        return (empty_result)
 
     # Extract various measures
     # TODO likely to need some sort of dispatch based on event type,
@@ -103,7 +103,7 @@ def process_event_date(res_queue, event, date, user_filter, input_bucket, result
     part_path = f"{input_bucket}/{results_prefix}/{event}/{date}"
     pq.write_to_dataset(table, root_path=part_path, filesystem=s3)
 
-    res_queue.put((len(table), unique_users, timestamp_min, timestamp_max))
+    return (len(table), unique_users, timestamp_min, timestamp_max)
 
 
 def prep_criteria(data_request):
@@ -154,28 +154,51 @@ def main():
     events, user_filter, date_prefixes = prep_criteria(data_request)
 
     # Loop over events and dates, filtering for users, write to results
-    results_queue = SimpleQueue()
+    cpus = cpu_count() or 1
+    print(f"pool size {cpus*10}")
     total_events = 0
     unique_users = set()
     timestamp_max = past_inf
     timestamp_min = future_inf
+    with get_context("spawn").Pool(cpus*10) as my_pool: # The magic number is based on testing this I/O bound task
 
-    procs = []
-    for event in events:
-        for date in date_prefixes:
-            p = Process(target=process_event_date, args=(results_queue,
-                event, date, user_filter, input_bucket, results_prefix))
-            procs.append(p)
-            p.start()
+        rets = {}
+        bad = {}
+        for event in events:
+            for date in date_prefixes:
+                r = my_pool.apply_async(process_event_date, ( event, date,
+                         user_filter, input_bucket, results_prefix))
+                rets[f"{event}/{date}"] = r
 
-    print(f"Launched {len(procs)} procs")
-    for _ in procs:
-        new_event_count, new_users, date_min, date_max = results_queue.get() # Blocks
+        print(f"Launched {len(rets)} procs")
+        passes=0
+        previous_remaining = 0 
+        while rets:
+            passes+=1
+            remaining = len(rets)
+            if remaining != previous_remaining:
+                previous_remaining = remaining
+                print(f"Pass: {passes} Remaining: {remaining} Events: {total_events}")
+            else:
+                time.sleep(1)
+            procs = list(rets.keys())
+            for p in procs:
+                r = rets.pop(p)
+                if r.ready():
+                    try:
+                        new_event_count, new_users, date_min, date_max = r.get(1)
 
-        total_events += new_event_count
-        unique_users |= new_users
-        timestamp_max = max(timestamp_max, date_max)
-        timestamp_min = min(timestamp_min, date_min)
+                        total_events += new_event_count
+                        unique_users |= new_users
+                        timestamp_max = max(timestamp_max, date_max)
+                        timestamp_min = min(timestamp_min, date_min)
+                    except Exception as e:
+                        print(f"Error - putting in error list {e}")
+                        bad[p] = r
+                else:
+                    rets[p] = r
+        if bad:
+            print(f"Bad days: {bad.keys()}")
 
     results_url = f"s3://{input_bucket}/{results_prefix}/"
     firstTimestamp = timestamp_min.isoformat() if timestamp_min != future_inf else None
@@ -192,6 +215,7 @@ def main():
 
     write_file_to_s3(input_bucket, f"{results_prefix}/request_completed.json", data_request)
     write_file_to_s3(input_bucket, f"{results_prefix}/results.json", data_results)
+    print(data_results)
 
     if data_request.get('callbackURL'):
         resp = requests.post(data_request['callbackURL'], json=data_results)

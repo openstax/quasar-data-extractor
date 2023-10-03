@@ -57,8 +57,9 @@ def write_file_to_s3(bucket_name, object_key, result):
         print(f"Failed to write result file to S3: {e}")
 
 
-def process_event_date(event, date, user_filter, input_bucket, results_prefix, event_bucket, event_prefix):
-
+def process_event_date(
+    event, date, user_filter, input_bucket, results_prefix, event_bucket, event_prefix
+):
     path = f"{event_prefix}/{event}/{date}"
     s3 = s3fs.S3FileSystem()
 
@@ -71,10 +72,10 @@ def process_event_date(event, date, user_filter, input_bucket, results_prefix, e
         table = dataset.read_pandas(use_threads=True)
     except FileNotFoundError:
         # Expected case for events that do not span entire date range
-        return (empty_result)
+        return empty_result
 
     if len(table) == 0:
-        return (empty_result)
+        return empty_result
 
     # Extract various measures
     # TODO likely to need some sort of dispatch based on event type,
@@ -85,8 +86,8 @@ def process_event_date(event, date, user_filter, input_bucket, results_prefix, e
     unique_users = set(table["user_uuid"].unique())
 
     timestamp_min_max = pc.min_max(table["occurred_at"])
-    timestamp_min = timestamp_min_max['min'].as_py()
-    timestamp_max = timestamp_min_max['max'].as_py()
+    timestamp_min = timestamp_min_max["min"].as_py()
+    timestamp_max = timestamp_min_max["max"].as_py()
 
     part_path = f"{input_bucket}/{results_prefix}/{event}/{date}"
     pq.write_to_dataset(table, root_path=part_path, filesystem=s3)
@@ -142,7 +143,7 @@ def main():
         event_prefix = data_request["eventPrefixOverride"]
 
     if "cpuScalingFactor" in data_request:
-        cpu_scaler =  data_request["cpuScalingFactor"]
+        cpu_scaler = data_request["cpuScalingFactor"]
     else:
         cpu_scaler = 4
 
@@ -163,22 +164,32 @@ def main():
     timestamp_min = future_inf
 
     print(f"Pool size: {cpus * cpu_scaler}")
-    set_start_method('spawn')
-    my_pool = Pool(cpus * cpu_scaler) 
+    set_start_method("spawn")
+    my_pool = Pool(cpus * cpu_scaler)
 
     rets = {}
     bad = {}
     for event in events:
         for date in date_prefixes:
-            r = my_pool.apply_async(process_event_date, ( event, date,
-                     user_filter, input_bucket, results_prefix, event_bucket, event_prefix))
+            r = my_pool.apply_async(
+                process_event_date,
+                (
+                    event,
+                    date,
+                    user_filter,
+                    input_bucket,
+                    results_prefix,
+                    event_bucket,
+                    event_prefix,
+                ),
+            )
             rets[f"{event}/{date}"] = r
 
     my_pool.close()
 
     print(f"Launched {len(rets)} procs")
-    passes=0
-    previous_remaining = 0 
+    passes = 0
+    previous_remaining = 0
     while rets:
         passes += 1
         remaining = len(rets)
@@ -206,7 +217,9 @@ def main():
     # TODO implement some sort of retry, rather than just dumping these
     if bad:
         print(f"Bad days: {bad.keys()}")
-        write_file_to_s3(input_bucket, f"{results_prefix}/error_days.json", list(bad.keys()))
+        write_file_to_s3(
+            input_bucket, f"{results_prefix}/error_days.json", list(bad.keys())
+        )
 
     results_url = f"s3://{input_bucket}/{results_prefix}/"
     firstTimestamp = timestamp_min.isoformat() if timestamp_min != future_inf else None
@@ -221,12 +234,14 @@ def main():
         "uniqueUserUUIDs": len(unique_users),
     }
 
-    write_file_to_s3(input_bucket, f"{results_prefix}/request_completed.json", data_request)
+    write_file_to_s3(
+        input_bucket, f"{results_prefix}/request_completed.json", data_request
+    )
     write_file_to_s3(input_bucket, f"{results_prefix}/results.json", data_results)
     print(data_results)
 
-    if data_request.get('callbackURL'):
-        resp = requests.post(data_request['callbackURL'], json=data_results)
+    if data_request.get("callbackURL"):
+        resp = requests.post(data_request["callbackURL"], json=data_results)
 
     return data_results
 

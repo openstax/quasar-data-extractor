@@ -13,7 +13,7 @@ from filter import prep_criteria, process_event_date
 @pytest.fixture(scope="session", autouse=True)
 def set_env_vars():
     os.environ["EventBucket"] = "test-bucket"
-    os.environ["EventPrefix"] = "testing"
+    os.environ["EventPrefix"] = "fixture"
     os.environ["InputBucket"] = "test-requests"
     os.environ["Filename"] = "test_request.json"
     os.environ["AWS_BATCH_JOB_ID"] = "testing-id"
@@ -45,13 +45,10 @@ def test_prep_criteria():
     assert user_filter.equals(expected_user_filter)
 
 @patch('s3fs.S3FileSystem', side_effect=pa.fs.LocalFileSystem)
-def test_process_event_date(mock_s3fs, monkeypatch):
+def test_process_event_date(mock_s3fs):
     # Arrange
     mock_table = pa.table({"user_uuid": ["uuid1", "uuid2"], "occurred_at": [datetime.utcnow(), datetime.utcnow()]})
     
-    monkeypatch.setattr(filter, "event_bucket", 'test-bucket')
-    monkeypatch.setattr(filter, "path_prefix", 'fixture')
-
     event = "someEvent"
     date = "year=2023/month=01/day=01"
 
@@ -62,11 +59,15 @@ def test_process_event_date(mock_s3fs, monkeypatch):
     user_filter = None  # Assuming no user filter for simplicity
     input_bucket = "some-bucket"
     results_prefix = "results"
-
-    result_count, time_min, time_max = process_event_date(event, date, user_filter, input_bucket, results_prefix)
+    event_bucket = os.environ['EventBucket']
+    event_prefix = os.environ['EventPrefix']
+    
+    new_event_count, new_users, date_min, date_max = process_event_date(
+        event, date, user_filter, input_bucket, results_prefix, event_bucket, event_prefix)
 
     # Assert
-    assert result_count == 2
-    assert time_min is not None
-    assert time_max is not None
+    assert new_event_count == 2
+    assert len(new_users) == 2
+    assert date_min is not None
+    assert date_max is not None
 

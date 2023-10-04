@@ -1,4 +1,4 @@
-FROM python
+FROM python:3.11
 
 COPY filter.py /
 
@@ -14,4 +14,4 @@ RUN pip install --upgrade pip && \
 RUN pwd
 RUN ls
 
-CMD ["python", "filer.py"]
+CMD ["python", "filter.py"]

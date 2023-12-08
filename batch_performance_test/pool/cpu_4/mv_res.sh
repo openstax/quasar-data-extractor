@@ -1,0 +1,10 @@
+mv 1-results.json 90-day-results.json
+mv 2-results.json 120-day-results.json
+mv 3-results.json 20-day-results.json
+mv 4-results.json 60-day-results.json
+mv 5-results.json 30-day-results.json
+mv 1-request_completed.json 90-day-request_completed.json
+mv 2-request_completed.json 120-day-request_completed.json
+mv 3-request_completed.json 20-day-request_completed.json
+mv 4-request_completed.json 60-day-request_completed.json
+mv 5-request_completed.json 30-day-request_completed.json

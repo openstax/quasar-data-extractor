@@ -1,0 +1,9 @@
+{
+    "extractionStatus": "completed",
+    "results_URL": "s3://quasar-sandbox-events-requests/test_pool_6/event_data_2023-09-28T20:31:57.651-1dd6/",
+    "extractionTime": "0:00:35.578417",
+    "totalEvents": 47,
+    "firstTimestamp": "2022-11-25T00:03:30.767000+00:00",
+    "lastTimestamp": "2022-11-26T23:17:46.513000+00:00",
+    "uniqueUserUUIDs": 13
+}
